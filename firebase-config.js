@@ -1,13 +1,12 @@
-// Paste your Firebase web app config here to turn on accounts, friends and
-// the global leaderboard. Leave it as null to run in solo (this-device) mode.
-// Firebase console → Project settings → Your apps → Web app → "SDK setup and configuration".
-//
-// Example:
-// export const firebaseConfig = {
-//   apiKey: "AIza...",
-//   authDomain: "your-project.firebaseapp.com",
-//   projectId: "your-project",
-//   appId: "1:123:web:abc",
-// };
+// Firebase web config for Fry League (project fry-league-14853).
+// This config is meant to be public; firestore.rules is what protects the data.
+// Set to null to run in solo (this-device) mode.
 
-export const firebaseConfig = null;
+export const firebaseConfig = {
+  apiKey: "AIzaSyB9qotJmgNTjwIk3FknMEuV4BYtis9pKto",
+  authDomain: "fry-league-14853.firebaseapp.com",
+  projectId: "fry-league-14853",
+  storageBucket: "fry-league-14853.firebasestorage.app",
+  messagingSenderId: "382042589332",
+  appId: "1:382042589332:web:d3eccb1224cd65b7848c81",
+};
