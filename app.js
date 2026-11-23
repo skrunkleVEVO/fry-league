@@ -36,7 +36,14 @@ function toast(msg, bad = false) {
   });
 })();
 
-$('#btn-google').onclick = () => store.signIn().catch((e) => toast(e.message, true));
+const AUTH_ERRORS = {
+  'auth/configuration-not-found': 'Google sign-in isn\'t turned on for this site yet.',
+  'auth/operation-not-allowed': 'Google sign-in isn\'t turned on for this site yet.',
+  'auth/unauthorized-domain': 'This website isn\'t on the sign-in allow list yet.',
+  'auth/popup-closed-by-user': 'Sign-in was closed before it finished.',
+  'auth/network-request-failed': 'No connection. Try again.',
+};
+$('#btn-google').onclick = () => store.signIn().catch((e) => { console.error(e); toast(AUTH_ERRORS[e.code] || 'Sign-in failed. Try again.', true); });
 $('#welcome-local').onsubmit = (e) => { e.preventDefault(); store.signIn($('#local-name').value.trim()); };
 $('#btn-signout').onclick = () => store.signOut();
 $('#user-chip').onclick = () => showView('me');
