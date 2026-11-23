@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// Paste this into Firebase console → Firestore Database → Rules → Publish.
+//
+// What it enforces:
+//  - Every receipt fingerprint (receipts/{key}) can be created exactly once, by anyone, ever.
+//    No updates, no deletes. That's the "scan once" guarantee.
+//  - A meal can only be written in the same transaction that claims its receipt.
+//  - Your totals can only go up by exactly what the new meal adds. No editing your score by hand.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      allow create: if request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'friendCode', 'totals', 'createdAt'])
+        && validName(request.resource.data.name)
+        && request.resource.data.friendCode is string && request.resource.data.friendCode.size() == 6
+        && request.resource.data.totals == {'items': 0, 'meals': 0, 'spendCents': 0, 'nuggets': 0};
+
+      allow update: if request.auth.uid == uid && (renameOnly() || addsOneMeal(uid));
+
+      function validName(n) { return n is string && n.size() > 0 && n.size() <= 30; }
+
+      function renameOnly() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && validName(request.resource.data.name);
+      }
+
+      function addsOneMeal(uid) {
+        let mealPath = /databases/$(database)/documents/users/$(uid)/meals/$(request.resource.data.lastMeal);
+        let m = getAfter(mealPath).data;
+        let o = resource.data.totals;
+        let n = request.resource.data.totals;
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totals', 'lastMeal'])
+          && !exists(mealPath) && existsAfter(mealPath)
+          && n.keys().hasOnly(['items', 'meals', 'spendCents', 'nuggets'])
+          && n.items == o.items + m.itemCount
+          && n.meals == o.meals + 1
+          && n.spendCents == o.spendCents + m.totalCents
+          && n.nuggets == o.nuggets + m.nuggets;
+      }
+
+      match /meals/{mealId} {
+        allow read: if signedIn();
+        allow create: if request.auth.uid == uid && validMeal(request.resource.data)
+          && !exists(/databases/$(database)/documents/receipts/$(request.resource.data.receiptKey))
+          && getAfter(/databases/$(database)/documents/receipts/$(request.resource.data.receiptKey)).data.uid == uid
+          && getAfter(/databases/$(database)/documents/receipts/$(request.resource.data.receiptKey)).data.mealId == mealId;
+        allow update, delete: if false;
+
+        function validMeal(m) {
+          return m.keys().hasOnly(['order', 'store', 'date', 'time', 'totalCents', 'items', 'itemCount', 'nuggets', 'receiptKey', 'createdAt'])
+            && m.receiptKey is string && m.receiptKey.size() == 40
+            && m.order is string && m.order.size() > 0 && m.order.size() <= 8
+            && m.date is string && m.date.size() == 10
+            && m.items is list && m.items.size() > 0 && m.items.size() <= 40
+            && m.itemCount is int && m.itemCount > 0 && m.itemCount <= 40
+            && m.nuggets is int && m.nuggets >= 0 && m.nuggets <= 200
+            && m.totalCents is int && m.totalCents >= 0 && m.totalCents <= 30000;
+        }
+      }
+
+      // Friendships are stored on both sides; either person can add or remove the link.
+      match /friends/{fid} {
+        allow read: if signedIn();
+        allow create: if (request.auth.uid == uid || request.auth.uid == fid) && uid != fid
+          && request.resource.data.keys().hasOnly(['since']);
+        allow delete: if request.auth.uid == uid || request.auth.uid == fid;
+      }
+    }
+
+    match /receipts/{key} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'mealId', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && existsAfter(/databases/$(database)/documents/users/$(request.auth.uid)/meals/$(request.resource.data.mealId));
+      allow update, delete: if false;
+    }
+  }
+}

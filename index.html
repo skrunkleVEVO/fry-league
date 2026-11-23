@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fry League</title>
+  <meta name="description" content="Competitive fast-food tracker. Scan your receipts, climb the leaderboard, out-eat your friends.">
+  <meta name="theme-color" content="#1d1a16">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="brand-mark">🍟</span> Fry League</div>
+    <button id="user-chip" class="chip" hidden></button>
+  </header>
+
+  <div id="mode-banner" class="banner" hidden>
+    Solo mode: everything is saved on this device only. Add a Firebase config to turn on friends and the global leaderboard (see README).
+  </div>
+
+  <!-- Signed out -->
+  <section id="view-welcome" class="view">
+    <div class="hero">
+      <h1>Who can eat<br>the <em>most</em>?</h1>
+      <p>Scan your fast-food receipts (paper or an app screenshot), rack up items, and climb the leaderboard against your friends. Every receipt counts once. Ever.</p>
+      <div id="welcome-cloud" hidden>
+        <button id="btn-google" class="btn btn-primary btn-lg">Sign in with Google</button>
+      </div>
+      <form id="welcome-local" hidden>
+        <label class="field"><span>Your name</span><input id="local-name" maxlength="30" required placeholder="Nugget Queen"></label>
+        <button class="btn btn-primary btn-lg" type="submit">Start eating</button>
+      </form>
+    </div>
+  </section>
+
+  <main id="app" hidden>
+    <!-- Scan -->
+    <section id="view-scan" class="view">
+      <div class="card scan-start" id="scan-start">
+        <h2>Log a meal</h2>
+        <p class="muted">Snap a paper receipt, or screenshot the receipt for an order in your fast-food app (open your order history and tap the order).</p>
+        <div class="btn-row">
+          <label class="btn btn-primary btn-lg">📷 Snap receipt<input id="file-camera" type="file" accept="image/*" capture="environment" hidden></label>
+          <label class="btn btn-lg">🖼️ Upload screenshot<input id="file-upload" type="file" accept="image/*" hidden></label>
+        </div>
+        <p class="tiny muted">Reading happens on your phone. The photo is never uploaded.</p>
+      </div>
+
+      <div class="card" id="scan-progress" hidden>
+        <h2>Reading receipt…</h2>
+        <div class="progress"><div id="progress-bar"></div></div>
+        <p class="muted tiny" id="progress-label">Loading the text reader</p>
+      </div>
+
+      <form class="card" id="scan-review" hidden>
+        <div class="review-head">
+          <h2>Check it</h2>
+          <img id="review-thumb" alt="Receipt preview">
+        </div>
+        <p class="muted tiny">Fix anything the scanner misread. The order number and date make this receipt unique, so it can only be claimed once.</p>
+        <div class="grid2">
+          <label class="field"><span>Order #</span><input id="r-order" inputmode="numeric" required></label>
+          <label class="field"><span>Store #</span><input id="r-store" inputmode="numeric" placeholder="optional"></label>
+          <label class="field"><span>Date</span><input id="r-date" type="date" required></label>
+          <label class="field"><span>Time</span><input id="r-time" type="time"></label>
+          <label class="field"><span>Total $</span><input id="r-total" inputmode="decimal" placeholder="0.00"></label>
+        </div>
+        <h3>Items</h3>
+        <ul id="r-items" class="items"></ul>
+        <button type="button" id="btn-add-item" class="btn btn-ghost">+ Add item</button>
+        <div class="score-preview" id="score-preview"></div>
+        <div class="btn-row">
+          <button type="button" id="btn-cancel" class="btn">Cancel</button>
+          <button type="submit" id="btn-claim" class="btn btn-primary">Claim it</button>
+        </div>
+      </form>
+
+      <div class="card" id="recent-card">
+        <h2>Your recent meals</h2>
+        <ul id="recent-meals" class="feed"></ul>
+      </div>
+    </section>
+
+    <!-- Leaderboard -->
+    <section id="view-board" class="view" hidden>
+      <div class="seg" id="board-scope">
+        <button data-scope="friends" class="on">Friends</button>
+        <button data-scope="global">Global</button>
+      </div>
+      <div class="seg seg-small" id="board-metric">
+        <button data-metric="items" class="on">Items</button>
+        <button data-metric="meals">Meals</button>
+        <button data-metric="nuggets">Nuggets</button>
+        <button data-metric="spendCents">Spent</button>
+      </div>
+      <ol id="board" class="board"></ol>
+    </section>
+
+    <!-- Friends -->
+    <section id="view-friends" class="view" hidden>
+      <div class="card">
+        <h2>Your friend code</h2>
+        <div class="code-row">
+          <code id="my-code" class="big-code">------</code>
+          <button id="btn-share" class="btn">Share</button>
+        </div>
+      </div>
+      <form class="card" id="add-friend">
+        <h2>Add a friend</h2>
+        <div class="code-row">
+          <input id="friend-code" maxlength="6" placeholder="ABC123" autocapitalize="characters" required>
+          <button class="btn btn-primary" type="submit">Add</button>
+        </div>
+      </form>
+      <div class="card">
+        <h2>Friends</h2>
+        <ul id="friends" class="feed"></ul>
+      </div>
+    </section>
+
+    <!-- Me -->
+    <section id="view-me" class="view" hidden>
+      <div class="card stats" id="my-stats"></div>
+      <form class="card" id="rename">
+        <h2>Display name</h2>
+        <div class="code-row">
+          <input id="my-name" maxlength="30" required>
+          <button class="btn" type="submit">Save</button>
+        </div>
+      </form>
+      <div class="card">
+        <h2>All meals</h2>
+        <ul id="all-meals" class="feed"></ul>
+      </div>
+      <button id="btn-signout" class="btn btn-ghost">Sign out</button>
+      <p class="tiny muted disclaimer">Fry League is a fan-made tracker and isn't affiliated with or endorsed by any restaurant chain.</p>
+    </section>
+
+    <nav class="tabs">
+      <button data-view="scan" class="on"><span>📸</span>Scan</button>
+      <button data-view="board"><span>🏆</span>Ranks</button>
+      <button data-view="friends"><span>👯</span>Friends</button>
+      <button data-view="me"><span>🍔</span>Me</button>
+    </nav>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

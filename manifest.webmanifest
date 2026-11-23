@@ -1,0 +1,10 @@
+{
+  "name": "Fry League",
+  "short_name": "Fry League",
+  "description": "Competitive fast-food tracker. Scan receipts, out-eat your friends.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fff6e6",
+  "theme_color": "#1d1a16",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
